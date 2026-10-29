@@ -59,7 +59,8 @@ class ModelRegistry:
             ModelRecord(id="kothagpt-moe", name="Kotha MoE Frontier", version="0.2.0",
                         family="kothagpt-moe", device_profile="gpu",
                         context_window=16384, quant_level="int4", status="research"),
-        ]:
+        ]
+        for m in tiers:
             self._mem[m.id] = m
 
     def _ensure_table(self, engine) -> None:
@@ -93,7 +94,11 @@ class ModelRegistry:
                 if rows:
                     import json
 
-                    return [ModelRecord(**json.loads(r[0])) for r in rows]
+                    merged = dict(self._mem)
+                    for r in rows:
+                        rec = ModelRecord(**json.loads(r[0]))
+                        merged[rec.id] = rec
+                    return list(merged.values())
         return list(self._mem.values())
 
     def get(self, model_id: str) -> ModelRecord | None:

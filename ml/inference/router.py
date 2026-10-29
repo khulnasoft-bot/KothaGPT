@@ -2,9 +2,15 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from enum import Enum
-from dataclasses import dataclass, field
-from typing import Any
+
+TIER_QUALITY: dict[str, float] = {
+    "nano": 0.62,
+    "small": 0.76,
+    "medium": 0.88,
+    "large": 0.96,
+}
 
 
 class TaskClass(str, Enum):
@@ -40,8 +46,13 @@ class ComplexitySignal:
 class ModelRouter:
     """Intelligent router sending requests to the right model tier."""
 
-    def __init__(self, config_path: str | None = None):
+    def __init__(
+        self,
+        config_path: str | None = None,
+        tier_quality: dict[str, float] | None = None,
+    ):
         self.config_path = config_path or "ml/inference/router_config.yaml"
+        self._tier_quality: dict[str, float] = {**TIER_QUALITY, **(tier_quality or {})}
         self._tier_thresholds: dict[TaskClass, str] = {
             TaskClass.AUTOCOMPLETE: "nano",
             TaskClass.SHORT_CHAT: "nano",
@@ -75,5 +86,8 @@ class ModelRouter:
         return self._escalation_chain.get(current_tier, [])
 
     def should_escalate(self, current_tier: str, quality_floor: float) -> bool:
-        """Determine if current tier meets the quality floor."""
-        return False
+        """Return True when the tier's measured quality is below the floor."""
+        measured_quality = self._tier_quality.get(current_tier)
+        if measured_quality is None:
+            return False
+        return measured_quality < quality_floor

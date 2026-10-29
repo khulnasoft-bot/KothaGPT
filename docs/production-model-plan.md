@@ -354,8 +354,9 @@ WS-6 (eval) gates all other workstreams and is the last to ship each tier.
 | Advanced multimodal pipelines | WS-4 |
 | Model routing improves cost/performance balance | WS-5 |
 | Stronger evaluation and adversarial coverage | WS-6 |
-| Quality improvement tied to real task outcomes | WS-6 (tier gates) |
-| Reliability and safety stable under multi-model deployment | WS-5 + WS-6 (adversarial + routing) |
+| Quality improvement tied to real task outcomes | WS-6 |
+| Reliability and safety stable under multi-model deployment (routing) | WS-5 |
+| Reliability and safety stable under multi-model deployment (adversarial) | WS-6 |
 
 ---
 
