@@ -114,7 +114,10 @@ class TransformerBlock(nn.Module):
         self.feed_forward = SwiGLU(config)
         self.attention_norm = RMSNorm(config.hidden_size, config.rms_norm_eps)
         self.ffn_norm = RMSNorm(config.hidden_size, config.rms_norm_eps)
-        self.self_attn = self.attention
+
+    @property
+    def self_attn(self) -> Attention:
+        return self.attention
 
     def forward(
         self,
@@ -177,16 +180,24 @@ class KothaGPT(nn.Module):
         max_new_tokens: int = 32,
         temperature: float = 1.0,
     ) -> torch.Tensor:
+        was_training = self.training
         self.eval()
-        with torch.no_grad():
-            context = input_ids[:, -self.config.max_position_embeddings:]
-            for _ in range(max_new_tokens):
-                if context.shape[1] > self.config.max_position_embeddings:
-                    break
-                logits = self(context)["logits"]
-                next_token = logits[:, -1, :].argmax(dim=-1, keepdim=True)
-                context = torch.cat([context, next_token], dim=-1)
-            return context
+        try:
+            with torch.no_grad():
+                generated = input_ids
+                max_positions = self.config.max_position_embeddings
+                for _ in range(max_new_tokens):
+                    context = generated[:, -max_positions:]
+                    logits = self(context)["logits"][:, -1, :]
+                    if temperature > 0:
+                        probs = F.softmax(logits / temperature, dim=-1)
+                        next_token = torch.multinomial(probs, num_samples=1)
+                    else:
+                        next_token = logits.argmax(dim=-1, keepdim=True)
+                    generated = torch.cat([generated, next_token], dim=-1)
+                return generated
+        finally:
+            self.train(was_training)
 
     def num_parameters(self, non_embedding: bool = False) -> int:
         if non_embedding:
